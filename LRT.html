@@ -570,45 +570,40 @@ function initSettingsUI() {
 
 function updateHeaderUI() {}
 
-function translateWeatherDesc(desc) {
-  var map = {
-    "Patchy rain nearby": "附近有零星雨",
-    "Light rain": "小雨",
-    "Moderate rain": "中雨",
-    "Heavy rain": "大雨",
-    "Sunny": "晴朗",
-    "Clear": "晴",
-    "Partly cloudy": "部分多雲",
-    "Cloudy": "多雲",
-    "Overcast": "陰天",
-    "Mist": "薄霧",
-    "Fog": "霧",
-    "Thunderstorm": "雷雨",
-    "Breezy": "微風"
-  };
-  return map[desc] || desc;
-}
-
+// 使用香港天文台官方無 CORS 限制的即時天氣 API
 function fetchWeatherInfo() {
   var xhr = new XMLHttpRequest();
-  // 改為 http:// 避免 iOS 9 舊版 SSL 憑證被瀏覽器安全攔截
-  var url = "http://wttr.in/TuenMun?format=j1";
+  var url = "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhr&lang=tc";
   xhr.open("GET", url, true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       if (xhr.status === 200) {
         try {
           var data = JSON.parse(xhr.responseText);
-          var current = data.current_condition[0];
-          var today = data.weather[0];
+          var tuenMunTemp = "--";
           
-          var tempC = current.temp_C + "°C";
-          var minC = today.mintempC + "°C";
-          var maxC = today.maxtempC + "°C";
-          var rawDesc = current.weatherDesc[0].value;
-          var desc = translateWeatherDesc(rawDesc);
+          // 從天文台分區氣溫中尋找屯門
+          if (data.temperature && data.temperature.data) {
+            for (var i = 0; i < data.temperature.data.length; i++) {
+              if (data.temperature.data[i].place === "屯門") {
+                tuenMunTemp = data.temperature.data[i].value + "°C";
+                break;
+              }
+            }
+          }
 
-          var barText = "屯門氣溫: " + tempC + " (" + desc + ") | 最低 " + minC + " / 最高 " + maxC;
+          // 取得天氣狀況描述 (例如：大致多雲、有雨等)
+          var weatherDesc = "";
+          if (data.icon && data.icon.length > 0) {
+            // 可透過icondesc或直接讀取天氣報告
+          }
+          
+          var warningText = "";
+          if (data.warningMessage && data.warningMessage.length > 0) {
+            warningText = " | ⚠️ " + data.warningMessage.join(" ");
+          }
+
+          var barText = "屯門氣溫: " + tuenMunTemp + warningText;
           document.getElementById("weatherBar").innerHTML = barText;
         } catch (e) {
           document.getElementById("weatherBar").innerHTML = "屯門氣溫: --°C";
