@@ -317,7 +317,7 @@
   <div class="header-row-clock">
     <div class="clock" id="clock">--:--:--</div>
   </div>
-  <div class="weather-bar" id="weatherBar">屯門天氣: 載入中...</div>
+  <div class="weather-bar" id="weatherBar">屯門氣溫: 載入中...</div>
 </div>
 
 <!-- 輕鐵顯示區 -->
@@ -570,44 +570,49 @@ function initSettingsUI() {
 
 function updateHeaderUI() {}
 
-// 使用香港天文台官方 HTTPS API，並帶有防錯與備用方案
+// 使用完全支援 HTTPS 且無 CORS 限制的 Open-Meteo 屯門實時天氣 API
+function translateWeatherCode(code) {
+  if (code === 0) return "晴朗";
+  if (code >= 1 && code <= 3) return "多雲";
+  if (code >= 51 && code <= 67) return "有雨";
+  if (code >= 71 && code <= 77) return "下雪";
+  if (code >= 95 && code <= 99) return "雷雨";
+  return "天氣正常";
+}
+
 function fetchWeatherInfo() {
   var xhr = new XMLHttpRequest();
-  var url = "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhr&lang=tc";
+  var url = "https://api.open-meteo.com/v1/forecast?latitude=22.3919&longitude=113.9782&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FHong_Kong";
   xhr.open("GET", url, true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       if (xhr.status === 200) {
         try {
           var data = JSON.parse(xhr.responseText);
-          var tuenMunTemp = "--";
+          var temp = data.current ? data.current.temperature_2m + "°C" : "--°C";
+          var code = data.current ? data.current.weather_code : 0;
+          var desc = translateWeatherCode(code);
           
-          if (data.temperature && data.temperature.data) {
-            for (var i = 0; i < data.temperature.data.length; i++) {
-              if (data.temperature.data[i].place === "屯門") {
-                tuenMunTemp = data.temperature.data[i].value + "°C";
-                break;
-              }
-            }
+          var minT = "--";
+          var maxT = "--";
+          if (data.daily && data.daily.temperature_2m_min && data.daily.temperature_2m_min.length > 0) {
+            minT = data.daily.temperature_2m_min[0] + "°C";
+          }
+          if (data.daily && data.daily.temperature_2m_max && data.daily.temperature_2m_max.length > 0) {
+            maxT = data.daily.temperature_2m_max[0] + "°C";
           }
 
-          var warningText = "";
-          if (data.warningMessage && data.warningMessage.length > 0) {
-            warningText = " | ⚠️ " + data.warningMessage.join(" ");
-          }
-
-          document.getElementById("weatherBar").innerHTML = "屯門氣溫: " + tuenMunTemp + warningText;
+          document.getElementById("weatherBar").innerHTML = "屯門氣溫: " + temp + " (" + desc + ") | 最低 " + minT + " / 最高 " + maxT;
         } catch (e) {
-          document.getElementById("weatherBar").innerHTML = "屯門氣溫: 數據解析中...";
+          document.getElementById("weatherBar").innerHTML = "屯門氣溫: --°C";
         }
       } else {
-        // 假如因為憑證或網絡被拒絕，自動顯示安全預設提示，不讓畫面空白
-        document.getElementById("weatherBar").innerHTML = "屯門天氣: 正常監測中";
+        document.getElementById("weatherBar").innerHTML = "屯門氣溫: 暫時無法讀取";
       }
     }
   };
   xhr.onerror = function() {
-    document.getElementById("weatherBar").innerHTML = "屯門天氣: 正常監測中";
+    document.getElementById("weatherBar").innerHTML = "屯門氣溫: 暫時無法讀取";
   };
   xhr.send();
 }
