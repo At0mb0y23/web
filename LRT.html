@@ -12,11 +12,11 @@
     color: #FFFFFF;
     font-family: "Helvetica Neue", "PingFang HK", "Heiti TC", sans-serif;
     margin: 0;
-    padding: 10px 15px 50px 15px; /* 保留底部空間防止 Safari 導覽列遮擋 */
+    padding: 10px 15px 50px 15px;
     width: 100%;
     height: 100%;
-    overflow: hidden; /* 徹底禁止整頁滾動 */
-    position: fixed;   /* 鎖死畫面防止 iOS 彈性滑動 */
+    overflow: hidden;
+    position: fixed;
     box-sizing: border-box;
   }
   .header {
@@ -39,7 +39,7 @@
   .header-right {
     float: right;
   }
-  .btn-settings {
+  .btn-action {
     background: #222222;
     color: #FFD700;
     border: 1px solid #D3A809;
@@ -48,9 +48,14 @@
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
+    margin-left: 6px;
+  }
+  .btn-refresh {
+    color: #00FF66;
+    border-color: #00FF66;
   }
   
-  /* 獨立一行的特大時鐘 (使用與其他文字相同的字體) */
+  /* 獨立一行的特大時鐘 */
   .header-row-clock {
     text-align: center;
     border-top: 1px solid #222222;
@@ -135,7 +140,6 @@
     color: #AAAAAA;
     text-align: center;
   }
-  /* 輕鐵車卡長方形圖示 */
   .train-car {
     display: inline-block;
     width: 26px;
@@ -321,7 +325,8 @@
   <div class="header-row-top">
     <div class="station-title" id="stationName" onclick="openSettings()">輕鐵 + 九巴班次</div>
     <div class="header-right">
-      <button class="btn-settings" onclick="openSettings()">⚙ 設定</button>
+      <button class="btn-action btn-refresh" onclick="location.reload()">🔄 重新整理</button>
+      <button class="btn-action" onclick="openSettings()">⚙ 設定</button>
     </div>
   </div>
   <div class="header-row-clock">
