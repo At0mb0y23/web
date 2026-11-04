@@ -570,10 +570,9 @@ function initSettingsUI() {
 
 function updateHeaderUI() {}
 
-// 英文天氣描述轉繁體中文對照表
 function translateWeatherDesc(desc) {
   var map = {
-    "Patchy rain nearby": "附近有零星驟雨",
+    "Patchy rain nearby": "附近有零星雨",
     "Light rain": "小雨",
     "Moderate rain": "中雨",
     "Heavy rain": "大雨",
@@ -592,7 +591,8 @@ function translateWeatherDesc(desc) {
 
 function fetchWeatherInfo() {
   var xhr = new XMLHttpRequest();
-  var url = "https://wttr.in/TuenMun?format=j1";
+  // 改為 http:// 避免 iOS 9 舊版 SSL 憑證被瀏覽器安全攔截
+  var url = "http://wttr.in/TuenMun?format=j1";
   xhr.open("GET", url, true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
@@ -608,13 +608,13 @@ function fetchWeatherInfo() {
           var rawDesc = current.weatherDesc[0].value;
           var desc = translateWeatherDesc(rawDesc);
 
-          var barText = "氣溫: " + tempC + " (" + desc + ") | 最低 " + minC + " / 最高 " + maxC;
+          var barText = "屯門氣溫: " + tempC + " (" + desc + ") | 最低 " + minC + " / 最高 " + maxC;
           document.getElementById("weatherBar").innerHTML = barText;
         } catch (e) {
-          document.getElementById("weatherBar").innerHTML = "氣溫: --°C";
+          document.getElementById("weatherBar").innerHTML = "屯門氣溫: --°C";
         }
       } else {
-        document.getElementById("weatherBar").innerHTML = "氣溫: 暫時無法讀取";
+        document.getElementById("weatherBar").innerHTML = "屯門氣溫: 暫時無法讀取";
       }
     }
   };
