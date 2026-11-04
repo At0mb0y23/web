@@ -16,23 +16,55 @@
     overflow-x: hidden;
   }
   .header {
-    display: block;
     border-bottom: 3px solid #D3A809;
-    padding-bottom: 8px;
+    padding-bottom: 10px;
     margin-bottom: 12px;
+  }
+  .header-row-top {
     overflow: hidden;
+    margin-bottom: 8px;
   }
   .station-title {
     float: left;
-    font-size: 30px;
+    font-size: 28px;
     font-weight: bold;
     color: #FFD700;
     cursor: pointer;
+    line-height: 40px;
   }
+  .header-right {
+    float: right;
+  }
+  .btn-settings {
+    background: #222222;
+    color: #FFD700;
+    border: 1px solid #D3A809;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  /* 獨立一行的特大數碼時鐘 */
+  .header-row-clock {
+    text-align: center;
+    border-top: 1px solid #222222;
+    padding-top: 8px;
+    margin-top: 8px;
+  }
+  .clock {
+    font-size: 64px;
+    color: #00FF66;
+    font-weight: bold;
+    font-family: "Courier New", Courier, monospace;
+    letter-spacing: 3px;
+    display: inline-block;
+  }
+
   .filter-badges {
-    float: left;
-    margin-left: 12px;
-    margin-top: 6px;
+    text-align: center;
+    margin-top: 4px;
   }
   .badge {
     display: inline-block;
@@ -42,30 +74,7 @@
     font-size: 14px;
     padding: 2px 8px;
     border-radius: 4px;
-    margin-right: 5px;
-  }
-  .header-right {
-    float: right;
-  }
-  .clock {
-    display: inline-block;
-    font-size: 28px;
-    color: #00FF66;
-    font-weight: bold;
-    vertical-align: middle;
-    margin-right: 12px;
-  }
-  .btn-settings {
-    display: inline-block;
-    background: #222222;
-    color: #FFD700;
-    border: 1px solid #D3A809;
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    vertical-align: middle;
+    margin: 0 4px;
   }
 
   /* 區塊樣式 */
@@ -306,12 +315,16 @@
 <body>
 
 <div class="header">
-  <div class="station-title" id="stationName" onclick="openSettings()">輕鐵 + 九巴班次</div>
-  <div class="filter-badges" id="filterBadges"></div>
-  <div class="header-right">
-    <div class="clock" id="clock">--:--:--</div>
-    <button class="btn-settings" onclick="openSettings()">⚙ 設定</button>
+  <div class="header-row-top">
+    <div class="station-title" id="stationName" onclick="openSettings()">輕鐵 + 九巴班次</div>
+    <div class="header-right">
+      <button class="btn-settings" onclick="openSettings()">⚙ 設定</button>
+    </div>
   </div>
+  <div class="header-row-clock">
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+  <div class="filter-badges" id="filterBadges"></div>
 </div>
 
 <!-- 輕鐵顯示區 -->
@@ -967,7 +980,6 @@ function renderLrtData(data) {
       var maxRows = Math.min(filteredRoutes.length, config.maxRows);
       for (var k = 0; k < maxRows; k++) {
         var item = filteredRoutes[k];
-        // 以長方形顯示單卡 (1個) 或拖卡 (2個)
         var carHtml = "";
         if (item.train_length === 2) {
           carHtml = '<span class="train-car"></span><span class="train-car"></span>';
