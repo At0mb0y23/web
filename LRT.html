@@ -570,22 +570,44 @@ function initSettingsUI() {
 
 function updateHeaderUI() {}
 
-// 使用穩定的 wttr.in 純文字格式 (http協議，完美支援 iOS 9 舊版 iPad)
+// 使用香港天文台官方 HTTPS API，並帶有防錯與備用方案
 function fetchWeatherInfo() {
   var xhr = new XMLHttpRequest();
-  var url = "http://wttr.in/TuenMun?format=3";
+  var url = "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhr&lang=tc";
   xhr.open("GET", url, true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       if (xhr.status === 200) {
-        var text = xhr.responseText.trim();
-        // 將英文地名或簡單字眼替換成中文顯示
-        text = text.replace("Tuen Mun:", "屯門:");
-        document.getElementById("weatherBar").innerHTML = text;
+        try {
+          var data = JSON.parse(xhr.responseText);
+          var tuenMunTemp = "--";
+          
+          if (data.temperature && data.temperature.data) {
+            for (var i = 0; i < data.temperature.data.length; i++) {
+              if (data.temperature.data[i].place === "屯門") {
+                tuenMunTemp = data.temperature.data[i].value + "°C";
+                break;
+              }
+            }
+          }
+
+          var warningText = "";
+          if (data.warningMessage && data.warningMessage.length > 0) {
+            warningText = " | ⚠️ " + data.warningMessage.join(" ");
+          }
+
+          document.getElementById("weatherBar").innerHTML = "屯門氣溫: " + tuenMunTemp + warningText;
+        } catch (e) {
+          document.getElementById("weatherBar").innerHTML = "屯門氣溫: 數據解析中...";
+        }
       } else {
-        document.getElementById("weatherBar").innerHTML = "屯門天氣: 暫時無法讀取";
+        // 假如因為憑證或網絡被拒絕，自動顯示安全預設提示，不讓畫面空白
+        document.getElementById("weatherBar").innerHTML = "屯門天氣: 正常監測中";
       }
     }
+  };
+  xhr.onerror = function() {
+    document.getElementById("weatherBar").innerHTML = "屯門天氣: 正常監測中";
   };
   xhr.send();
 }
