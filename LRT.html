@@ -23,7 +23,7 @@
     position: fixed;
   }
 
-  /* 絕對置中外層容器，徹底消除 iOS 9 左側偏移 */
+  /* 絕對置中外層容器，消除左側偏移 */
   .main-container {
     width: 96%;
     max-width: 1000px;
@@ -39,11 +39,25 @@
     margin-bottom: 10px;
     text-align: center;
   }
+
+  /* 頂部日期與農曆同行政中顯示 */
+  .header-row-date {
+    text-align: center;
+    width: 100%;
+    margin-bottom: 2px;
+  }
+  .date-display {
+    font-size: 24px;
+    color: #FFD700;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
   
-  /* 特大時鐘置頂一行 (放大 2 倍至 112px) */
+  /* 特大時鐘置頂一行 (112px) */
   .header-row-clock {
     text-align: center;
     width: 100%;
+    margin-top: 2px;
   }
   .clock {
     font-size: 112px;
@@ -54,7 +68,7 @@
     letter-spacing: 2px;
   }
 
-  /* 天氣資訊欄 */
+  /* 天氣資訊欄 (已移除屯門二字) */
   .weather-bar {
     text-align: center;
     margin-top: 4px;
@@ -351,10 +365,13 @@
 
 <div class="main-container">
   <div class="header">
+    <div class="header-row-date">
+      <div class="date-display" id="dateDisplay">----年--月--日 (星期-) &nbsp; --</div>
+    </div>
     <div class="header-row-clock">
       <div class="clock" id="clock">--:--:--</div>
     </div>
-    <div class="weather-bar" id="weatherBar">屯門天氣: 讀取中...</div>
+    <div class="weather-bar" id="weatherBar">現時: 讀取中...</div>
   </div>
 
   <!-- 輕鐵顯示區 -->
@@ -544,6 +561,7 @@ var STATIONS = [
 ];
 
 var ALL_ROUTES = ["505", "507", "610", "614", "614P", "615", "615P", "751", "705", "706", "761P"];
+var WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
 var config = {
   displayMode: "BOTH",
@@ -560,7 +578,6 @@ var tempKmbStops = [];
 var kmbEtaCache = {};
 var stopNameCache = {};
 
-// 天氣狀態暫存
 var weatherState = {
   currentTemp: "--",
   minTemp: "--",
@@ -616,9 +633,88 @@ function initSettingsUI() {
 
 function updateHeaderUI() {}
 
-// 渲染頂部天氣列
+// 輕量農曆計算演算法 (不帶「農曆」二字)
+function getLunarDate(solarYear, solarMonth, solarDay) {
+  var lunarInfo = [
+    0x04bd8,0x04ae0,0x0a570,0x05455,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+    0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+    0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+    0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+    0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+    0x06ca0,0x0b550,0x15355,0x04da0,0x0a5d0,0x14573,0x052d0,0x0a9a8,0x0e950,0x06aa0,
+    0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+    0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,
+    0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b270,0x1b255,0x06a50,0x06d40,0x0af46,0x0ab60,
+    0x09570,0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,
+    0x092e0,0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0a6b7,0x034a0,0x0b4d0,
+    0x16a43,0x04950,0x0a950,0x0b4a4,0x0b550,0x0b5a0,0x155a2,0x064b0,0x025d0,0x0a2d8,
+    0x0a950,0x0b404,0x06b50,0x0ad50,0x05b52,0x04b60,0x0a6e3,0x0a4e0,0x0d260,0x0ea65,
+    0x0d530,0x05aa0,0x076a3,0x096d0,0x04bd8,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,
+    0x0dd45,0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,1b255,0x06d20,
+    0x0ada0,0x14b63
+  ];
+  
+  var baseDate = new Date(1900, 0, 31);
+  var objDate = new Date(solarYear, solarMonth - 1, solarDay);
+  var offset = Math.floor((objDate - baseDate) / 86400000);
+  
+  var days = 0, leapMonth = 0, temp = 0;
+  for (var i = 1900; i < 2100 && offset > 0; i++) {
+    temp = getLunarYearDays(i);
+    offset -= temp;
+    if (offset < 0) { offset += temp; break; }
+  }
+  var year = i;
+  
+  leapMonth = getLeapMonth(year);
+  var isLeap = false;
+  for (var i = 1; i < 13 && offset > 0; i++) {
+    if (leapMonth > 0 && i === (leapMonth + 1) && !isLeap) {
+      --i; isLeap = true;
+      temp = getLeapMonthDays(year);
+    } else {
+      temp = getMonthDays(year, i);
+    }
+    if (isLeap && i === (leapMonth + 1)) isLeap = false;
+    offset -= temp;
+  }
+  if (offset === 0 && leapMonth > 0 && i === leapMonth + 1) {
+    if (isLeap) isLeap = false;
+    else isLeap = true;
+  }
+  if (offset < 0) { offset += temp; --i; }
+  var month = i;
+  var day = offset + 1;
+  
+  var monthsName = ["正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "冬", "臘"];
+  var daysName = ["初一", "初二", "初三", "初四", "初五", "初六", "初七", "初八", "初九", "初十",
+                  "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十",
+                  "廿一", "廿二", "廿三", "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"];
+  
+  function getLunarYearDays(y) {
+    var sum = 348;
+    for (var k = 0x8000; k > 0x8; k >>= 1) {
+      sum += (lunarInfo[y - 1900] & k) ? 1 : 0;
+    }
+    return sum + getLeapMonthDays(y);
+  }
+  function getLeapMonth(y) { return (lunarInfo[y - 1900] & 0xf); }
+  function getLeapMonthDays(y) {
+    if (getLeapMonth(y)) return (lunarInfo[y - 1900] & 0x10000) ? 30 : 29;
+    return 0;
+  }
+  function getMonthDays(y, m) {
+    return (lunarInfo[y - 1900] & (0x10000 >> m)) ? 30 : 29;
+  }
+  
+  var mStr = (isLeap ? "閏" : "") + monthsName[month - 1] + "月";
+  var dStr = daysName[day - 1];
+  return mStr + dStr;
+}
+
+// 渲染頂部天氣列 (已移除「屯門」二字)
 function renderWeatherBar() {
-  var html = "屯門現時: " + weatherState.currentTemp + "°C (最低 " + weatherState.minTemp + "°C / 最高 " + weatherState.maxTemp + "°C)";
+  var html = "現時: " + weatherState.currentTemp + "°C (最低 " + weatherState.minTemp + "°C / 最高 " + weatherState.maxTemp + "°C)";
   if (weatherState.warnings.length > 0) {
     for (var i = 0; i < weatherState.warnings.length; i++) {
       html += '<span class="weather-warn-tag">⚠️ ' + weatherState.warnings[i] + '</span>';
@@ -629,11 +725,10 @@ function renderWeatherBar() {
   document.getElementById("weatherBar").innerHTML = html;
 }
 
-// 採用香港天文台官方 Open Data API (使用 DigiCert 憑證，100% 兼容 iOS 9 及 HTTPS)
+// 採用香港天文台官方 Open Data API
 function fetchWeatherInfo() {
   var ts = new Date().getTime();
 
-  // 1. 抓取本港分區氣溫 (rhrread)
   var xhr1 = new XMLHttpRequest();
   xhr1.open("GET", "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc&t=" + ts, true);
   xhr1.onreadystatechange = function() {
@@ -663,7 +758,6 @@ function fetchWeatherInfo() {
   };
   xhr1.send();
 
-  // 2. 抓取今日預測最低及最高氣溫 (fnd)
   var xhr2 = new XMLHttpRequest();
   xhr2.open("GET", "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc&t=" + ts, true);
   xhr2.onreadystatechange = function() {
@@ -685,7 +779,6 @@ function fetchWeatherInfo() {
   };
   xhr2.send();
 
-  // 3. 抓取天文台現正生效的特別天氣警告信號 (warnsum)
   var xhr3 = new XMLHttpRequest();
   xhr3.open("GET", "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc&t=" + ts, true);
   xhr3.onreadystatechange = function() {
@@ -1032,6 +1125,14 @@ function arrayContains(arr, val) {
 
 function updateClock() {
   var now = new Date();
+  var yyyy = now.getFullYear();
+  var mm = now.getMonth() + 1;
+  var dd = now.getDate();
+  var dayStr = WEEKDAYS[now.getDay()];
+  
+  // 陽曆與農曆在同一行顯示，且不帶「農曆」二字
+  document.getElementById("dateDisplay").innerHTML = yyyy + "年" + mm + "月" + dd + "日 (星期" + dayStr + ") &nbsp; " + getLunarDate(yyyy, mm, dd);
+
   var h = ("0" + now.getHours()).slice(-2);
   var m = ("0" + now.getMinutes()).slice(-2);
   var s = ("0" + now.getSeconds()).slice(-2);
