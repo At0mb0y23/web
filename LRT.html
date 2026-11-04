@@ -317,7 +317,7 @@
   <div class="header-row-clock">
     <div class="clock" id="clock">--:--:--</div>
   </div>
-  <div class="weather-bar" id="weatherBar">屯門氣溫: 載入中...</div>
+  <div class="weather-bar" id="weatherBar">屯門天氣: 載入中...</div>
 </div>
 
 <!-- 輕鐵顯示區 -->
@@ -570,46 +570,20 @@ function initSettingsUI() {
 
 function updateHeaderUI() {}
 
-// 使用香港天文台官方無 CORS 限制的即時天氣 API
+// 使用穩定的 wttr.in 純文字格式 (http協議，完美支援 iOS 9 舊版 iPad)
 function fetchWeatherInfo() {
   var xhr = new XMLHttpRequest();
-  var url = "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhr&lang=tc";
+  var url = "http://wttr.in/TuenMun?format=3";
   xhr.open("GET", url, true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       if (xhr.status === 200) {
-        try {
-          var data = JSON.parse(xhr.responseText);
-          var tuenMunTemp = "--";
-          
-          // 從天文台分區氣溫中尋找屯門
-          if (data.temperature && data.temperature.data) {
-            for (var i = 0; i < data.temperature.data.length; i++) {
-              if (data.temperature.data[i].place === "屯門") {
-                tuenMunTemp = data.temperature.data[i].value + "°C";
-                break;
-              }
-            }
-          }
-
-          // 取得天氣狀況描述 (例如：大致多雲、有雨等)
-          var weatherDesc = "";
-          if (data.icon && data.icon.length > 0) {
-            // 可透過icondesc或直接讀取天氣報告
-          }
-          
-          var warningText = "";
-          if (data.warningMessage && data.warningMessage.length > 0) {
-            warningText = " | ⚠️ " + data.warningMessage.join(" ");
-          }
-
-          var barText = "屯門氣溫: " + tuenMunTemp + warningText;
-          document.getElementById("weatherBar").innerHTML = barText;
-        } catch (e) {
-          document.getElementById("weatherBar").innerHTML = "屯門氣溫: --°C";
-        }
+        var text = xhr.responseText.trim();
+        // 將英文地名或簡單字眼替換成中文顯示
+        text = text.replace("Tuen Mun:", "屯門:");
+        document.getElementById("weatherBar").innerHTML = text;
       } else {
-        document.getElementById("weatherBar").innerHTML = "屯門氣溫: 暫時無法讀取";
+        document.getElementById("weatherBar").innerHTML = "屯門天氣: 暫時無法讀取";
       }
     }
   };
