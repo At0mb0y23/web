@@ -31,7 +31,7 @@
     padding-top: 2px;
   }
   .clock {
-    font-size: 52px;
+    font-size: 56px;
     color: #00FF66;
     font-weight: bold;
     display: inline-block;
@@ -41,10 +41,24 @@
   /* 天氣資訊欄 */
   .weather-bar {
     text-align: center;
-    margin-top: 2px;
-    font-size: 15px;
+    margin-top: 4px;
+    font-size: 18px;
     color: #00BFFF;
     font-weight: bold;
+  }
+  .weather-warn-tag {
+    display: inline-block;
+    background-color: #CC0000;
+    color: #FFFFFF;
+    padding: 1px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-size: 16px;
+  }
+  .weather-ok-tag {
+    color: #00FF66;
+    margin-left: 8px;
+    font-size: 16px;
   }
 
   /* 區塊樣式 */
@@ -317,7 +331,7 @@
   <div class="header-row-clock">
     <div class="clock" id="clock">--:--:--</div>
   </div>
-  <div class="weather-bar" id="weatherBar">屯門天氣: 載入中...</div>
+  <div class="weather-bar" id="weatherBar">屯門天氣: 讀取中...</div>
 </div>
 
 <!-- 輕鐵顯示區 -->
@@ -522,6 +536,14 @@ var tempKmbStops = [];
 var kmbEtaCache = {};
 var stopNameCache = {};
 
+// 天氣狀態暫存
+var weatherState = {
+  currentTemp: "--",
+  minTemp: "--",
+  maxTemp: "--",
+  warnings: []
+};
+
 function loadConfig() {
   try {
     var saved = localStorage.getItem("lrt_kmb_config_v2");
@@ -570,34 +592,100 @@ function initSettingsUI() {
 
 function updateHeaderUI() {}
 
-// 針對 iOS 9 兼容的 JSONP 屯門天氣抓取方案（完美避開 CORS 及 HTTPS 限制）
+// 渲染頂部天氣列
+function renderWeatherBar() {
+  var html = "屯門現時: " + weatherState.currentTemp + "°C (最低 " + weatherState.minTemp + "°C / 最高 " + weatherState.maxTemp + "°C)";
+  if (weatherState.warnings.length > 0) {
+    for (var i = 0; i < weatherState.warnings.length; i++) {
+      html += '<span class="weather-warn-tag">⚠️ ' + weatherState.warnings[i] + '</span>';
+    }
+  } else {
+    html += '<span class="weather-ok-tag">✓ 無特別天氣警告</span>';
+  }
+  document.getElementById("weatherBar").innerHTML = html;
+}
+
+// 採用香港天文台官方 Open Data API (使用 DigiCert 憑證，100% 兼容 iOS 9 及 HTTPS)
 function fetchWeatherInfo() {
-  var xhr = new XMLHttpRequest();
-  // 使用台灣中央氣象署或相容的無憑證限制 API，或安全備用代理
-  var url = "https://wttr.in/TuenMun?format=%t+%C";
-  xhr.open("GET", url, true);
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      if (xhr.status === 200) {
-        var res = xhr.responseText.trim();
-        // 翻譯常見天氣英文為中文
-        res = res.replace("Sunny", "晴朗")
-                   .replace("Clear", "晴")
-                   .replace("Partly cloudy", "部分多雲")
-                   .replace("Cloudy", "多雲")
-                   .replace("Light rain", "小雨")
-                   .replace("Patchy rain nearby", "附近有雨")
-                   .replace("Rain", "有雨");
-        document.getElementById("weatherBar").innerHTML = "屯門氣溫: " + res;
-      } else {
-        document.getElementById("weatherBar").innerHTML = "屯門氣溫: 屯門區即時監測中";
-      }
+  var ts = new Date().getTime();
+
+  // 1. 抓取本港分區氣溫 (正確代號為 rhrread)
+  var xhr1 = new XMLHttpRequest();
+  xhr1.open("GET", "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc&t=" + ts, true);
+  xhr1.onreadystatechange = function() {
+    if (xhr1.readyState === 4 && xhr1.status === 200) {
+      try {
+        var data = JSON.parse(xhr1.responseText);
+        if (data && data.temperature && data.temperature.data) {
+          var list = data.temperature.data;
+          var found = false;
+          for (var i = 0; i < list.length; i++) {
+            if (list[i].place === "屯門") {
+              weatherState.currentTemp = list[i].value;
+              found = true;
+              break;
+            }
+          }
+          if (!found && list.length > 0) {
+            weatherState.currentTemp = list[0].value;
+          }
+        }
+        // 從 rhrread 提取今日最高/最低氣溫紀錄（如天文台有提供）
+        if (data && data.mintempFrom00To09 && data.mintempFrom00To09.value) {
+          weatherState.minTemp = data.mintempFrom00To09.value;
+        }
+        renderWeatherBar();
+      } catch (e) {}
     }
   };
-  xhr.onerror = function() {
-    document.getElementById("weatherBar").innerHTML = "屯門氣溫: 屯門區即時監測中";
+  xhr1.send();
+
+  // 2. 抓取今日預測最低及最高氣溫 (fnd)
+  var xhr2 = new XMLHttpRequest();
+  xhr2.open("GET", "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=tc&t=" + ts, true);
+  xhr2.onreadystatechange = function() {
+    if (xhr2.readyState === 4 && xhr2.status === 200) {
+      try {
+        var data = JSON.parse(xhr2.responseText);
+        if (data && data.weatherForecast && data.weatherForecast.length > 0) {
+          var today = data.weatherForecast[0];
+          if (today.forecastMintemp && today.forecastMintemp.value !== undefined) {
+            weatherState.minTemp = today.forecastMintemp.value;
+          }
+          if (today.forecastMaxtemp && today.forecastMaxtemp.value !== undefined) {
+            weatherState.maxTemp = today.forecastMaxtemp.value;
+          }
+          renderWeatherBar();
+        }
+      } catch (e) {}
+    }
   };
-  xhr.send();
+  xhr2.send();
+
+  // 3. 抓取天文台現正生效的特別天氣警告信號 (warnsum)
+  var xhr3 = new XMLHttpRequest();
+  xhr3.open("GET", "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=tc&t=" + ts, true);
+  xhr3.onreadystatechange = function() {
+    if (xhr3.readyState === 4 && xhr3.status === 200) {
+      try {
+        var data = JSON.parse(xhr3.responseText);
+        var activeWarnings = [];
+        if (data) {
+          for (var key in data) {
+            if (data.hasOwnProperty(key) && data[key] && data[key].name) {
+              var wObj = data[key];
+              // 若為熱帶氣旋或暴雨警告，type 會顯示具體級別（如「三號強風信號」、「黃色暴雨警告信號」）
+              var wText = wObj.type ? (wObj.type + (wObj.name.indexOf(wObj.type) === -1 ? " " + wObj.name : "")) : wObj.name;
+              activeWarnings.push(wText);
+            }
+          }
+        }
+        weatherState.warnings = activeWarnings;
+        renderWeatherBar();
+      } catch (e) {}
+    }
+  };
+  xhr3.send();
 }
 
 function searchKmbRoute() {
