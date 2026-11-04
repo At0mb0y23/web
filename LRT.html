@@ -12,30 +12,46 @@
     color: #FFFFFF;
     font-family: "Helvetica Neue", "PingFang HK", "Heiti TC", sans-serif;
     margin: 0;
-    padding: 10px 15px 70px 15px;
+    padding: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
     position: fixed;
+  }
+
+  /* 絕對置中外層容器，徹底消除 iOS 9 左側偏移 */
+  .main-container {
+    width: 96%;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-top: 6px;
+    padding-bottom: 70px;
     box-sizing: border-box;
   }
+
   .header {
     border-bottom: 3px solid #D3A809;
     padding-bottom: 6px;
     margin-bottom: 10px;
+    text-align: center;
   }
   
-  /* 特大時鐘置頂一行 */
+  /* 特大時鐘置頂一行 (放大 2 倍至 112px) */
   .header-row-clock {
     text-align: center;
-    padding-top: 2px;
+    width: 100%;
   }
   .clock {
-    font-size: 56px;
+    font-size: 112px;
     color: #00FF66;
     font-weight: bold;
     display: inline-block;
-    line-height: 1.1;
+    line-height: 1.0;
+    letter-spacing: 2px;
   }
 
   /* 天氣資訊欄 */
@@ -63,11 +79,13 @@
 
   /* 區塊樣式 */
   .section-box {
-    margin-bottom: 12px;
+    width: 100%;
+    margin: 0 auto 12px auto;
     background: #111111;
     border: 1px solid #333333;
     border-radius: 8px;
     padding: 8px 16px;
+    box-sizing: border-box;
   }
   .section-title-lrt {
     font-size: 20px;
@@ -101,14 +119,17 @@
   .route {
     width: 18%;
     color: #FFD700;
+    text-align: left;
   }
   .kmb-route {
     width: 18%;
     color: #FF5555;
+    text-align: left;
   }
   .dest {
     width: 47%;
     color: #FFFFFF;
+    text-align: left;
   }
   .cars {
     width: 15%;
@@ -134,7 +155,7 @@
   .status-bar {
     position: fixed;
     bottom: 4px;
-    left: 15px;
+    left: 2%;
     font-size: 12px;
     color: #666666;
   }
@@ -143,7 +164,7 @@
   .bottom-bar {
     position: fixed;
     bottom: 10px;
-    right: 15px;
+    right: 2%;
     z-index: 100;
   }
   .svg-btn {
@@ -190,6 +211,7 @@
     margin: 20px auto;
     padding: 18px 22px;
     color: #FFFFFF;
+    box-sizing: border-box;
   }
   .modal-title {
     font-size: 24px;
@@ -327,18 +349,20 @@
 </head>
 <body>
 
-<div class="header">
-  <div class="header-row-clock">
-    <div class="clock" id="clock">--:--:--</div>
+<div class="main-container">
+  <div class="header">
+    <div class="header-row-clock">
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+    <div class="weather-bar" id="weatherBar">屯門天氣: 讀取中...</div>
   </div>
-  <div class="weather-bar" id="weatherBar">屯門天氣: 讀取中...</div>
+
+  <!-- 輕鐵顯示區 -->
+  <div id="lrtContent"></div>
+
+  <!-- 九巴顯示區 -->
+  <div id="kmbContent"></div>
 </div>
-
-<!-- 輕鐵顯示區 -->
-<div id="lrtContent"></div>
-
-<!-- 九巴顯示區 -->
-<div id="kmbContent"></div>
 
 <div class="status-bar" id="status">最後更新: --</div>
 
@@ -609,7 +633,7 @@ function renderWeatherBar() {
 function fetchWeatherInfo() {
   var ts = new Date().getTime();
 
-  // 1. 抓取本港分區氣溫 (正確代號為 rhrread)
+  // 1. 抓取本港分區氣溫 (rhrread)
   var xhr1 = new XMLHttpRequest();
   xhr1.open("GET", "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=tc&t=" + ts, true);
   xhr1.onreadystatechange = function() {
@@ -630,7 +654,6 @@ function fetchWeatherInfo() {
             weatherState.currentTemp = list[0].value;
           }
         }
-        // 從 rhrread 提取今日最高/最低氣溫紀錄（如天文台有提供）
         if (data && data.mintempFrom00To09 && data.mintempFrom00To09.value) {
           weatherState.minTemp = data.mintempFrom00To09.value;
         }
@@ -674,7 +697,6 @@ function fetchWeatherInfo() {
           for (var key in data) {
             if (data.hasOwnProperty(key) && data[key] && data[key].name) {
               var wObj = data[key];
-              // 若為熱帶氣旋或暴雨警告，type 會顯示具體級別（如「三號強風信號」、「黃色暴雨警告信號」）
               var wText = wObj.type ? (wObj.type + (wObj.name.indexOf(wObj.type) === -1 ? " " + wObj.name : "")) : wObj.name;
               activeWarnings.push(wText);
             }
