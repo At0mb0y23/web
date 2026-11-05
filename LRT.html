@@ -53,14 +53,13 @@
     letter-spacing: 1px;
   }
   
-  /* 特大時鐘置頂一行 (112px) */
+  /* 特大時鐘置頂一行 */
   .header-row-clock {
     text-align: center;
     width: 100%;
     margin-top: 2px;
   }
   .clock {
-    font-size: 112px;
     color: #00FF66;
     font-weight: bold;
     display: inline-block;
@@ -175,7 +174,7 @@
     z-index: 1000;
   }
 
-  /* 底部浮動 SVG 按鈕列 (修復 iOS 9 渲染殘影) */
+  /* 底部浮動 SVG 按鈕列 */
   .bottom-bar {
     position: fixed;
     bottom: 10px;
@@ -484,6 +483,18 @@
       </select>
     </div>
 
+    <!-- ================= 時鐘文字大小設定 ================= -->
+    <div class="sub-header">時鐘顯示設定</div>
+    <div class="form-group">
+      <label class="form-label">時鐘文字大小：</label>
+      <select id="clockSizeSelect">
+        <option value="80px">標準 (80px)</option>
+        <option value="112px">特大 (112px，推薦)</option>
+        <option value="140px">極大 (140px)</option>
+        <option value="170px">震撼超大 (170px)</option>
+      </select>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-reset" onclick="resetFilters()">重置全部</button>
       <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
@@ -573,7 +584,8 @@ var config = {
   routes: [],
   carLength: 0,
   maxRows: 3,
-  kmbWatches: []
+  kmbWatches: [],
+  clockSize: "112px"
 };
 
 var tempKmbDirections = [];
@@ -590,7 +602,7 @@ var weatherState = {
 
 function loadConfig() {
   try {
-    var saved = localStorage.getItem("lrt_kmb_config_v2");
+    var saved = localStorage.getItem("lrt_kmb_config_v3");
     if (saved) {
       var parsed = JSON.parse(saved);
       config.displayMode = parsed.displayMode || "BOTH";
@@ -600,13 +612,17 @@ function loadConfig() {
       config.carLength = parsed.carLength || 0;
       config.maxRows = parsed.maxRows || 3;
       config.kmbWatches = parsed.kmbWatches || [];
+      config.clockSize = parsed.clockSize || "112px";
     }
   } catch (e) {}
+  
+  // 套用時鐘字體大小
+  document.getElementById("clock").style.fontSize = config.clockSize;
 }
 
 function saveConfigToStorage() {
   try {
-    localStorage.setItem("lrt_kmb_config_v2", JSON.stringify(config));
+    localStorage.setItem("lrt_kmb_config_v3", JSON.stringify(config));
   } catch (e) {}
 }
 
@@ -1007,6 +1023,7 @@ function openSettings() {
   selectMode(config.displayMode);
   document.getElementById("stationSelect").value = config.stationId;
   document.getElementById("maxRowsSelect").value = String(config.maxRows);
+  document.getElementById("clockSizeSelect").value = config.clockSize;
 
   var pChips = document.getElementById("platformChips").getElementsByTagName("span");
   for (var i = 0; i < pChips.length; i++) {
@@ -1079,6 +1096,7 @@ function resetFilters() {
   syncQuickRouteChips();
   selectCarLen(0);
   document.getElementById("maxRowsSelect").value = "3";
+  document.getElementById("clockSizeSelect").value = "112px";
   config.kmbWatches = [];
   renderSavedKmbList();
 }
@@ -1111,6 +1129,10 @@ function saveSettings() {
   }
 
   config.maxRows = parseInt(document.getElementById("maxRowsSelect").value, 10) || 3;
+  config.clockSize = document.getElementById("clockSizeSelect").value;
+
+  // 套用時鐘大小
+  document.getElementById("clock").style.fontSize = config.clockSize;
 
   saveConfigToStorage();
   updateHeaderUI();
